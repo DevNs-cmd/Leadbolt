@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: leadbolt-db
+    environment:
+      POSTGRES_USER: leadbolt
+      POSTGRES_PASSWORD: leadbolt
+      POSTGRES_DB: leadbolt
+    ports:
+      - "5432:5432"
+    volumes:
+      - leadbolt_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leadbolt"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: leadbolt-api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      DATABASE_URL: postgresql://leadbolt:leadbolt@db:5432/leadbolt
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  leadbolt_pgdata:
