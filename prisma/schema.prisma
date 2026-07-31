@@ -1,0 +1,64 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  email       String?  @unique
+  phone       String?
+  firstName   String?
+  lastName    String?
+  company     String?
+  status      String   @default("new")
+  source      String?
+  notes       String?  // Removed @db.Text for SQLite compatibility
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  messages    MessageHistory[]
+  
+  @@map("leads")
+}
+
+model MessageTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   @default("custom")
+  subject     String
+  content     String   // Removed @db.Text for SQLite compatibility
+  variables   String   // Changed from String[] to String for SQLite
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  messages    MessageHistory[]
+  
+  @@map("message_templates")
+}
+
+model MessageHistory {
+  id          String   @id @default(cuid())
+  leadId      String
+  templateId  String?
+  subject     String
+  content     String   // Removed @db.Text for SQLite compatibility
+  channel     String
+  status      String
+  sentAt      DateTime @default(now())
+  deliveredAt DateTime?
+  readAt      DateTime?
+  metadata    String?  // Changed from Json to String for SQLite
+  
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  template    MessageTemplate? @relation(fields: [templateId], references: [id])
+  
+  @@index([leadId])
+  @@index([sentAt])
+  @@map("message_history")
+}
