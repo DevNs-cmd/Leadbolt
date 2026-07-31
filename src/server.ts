@@ -3,8 +3,9 @@ import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import templateRoutes from './routes/template.routes';
-import messageRoutes from './routes/message.routes';
+import messageRoutes from './routes/messages.routes';
 import leadRoutes from './routes/lead.routes';
+import whatsappRoutes from './routes/whatsapp.routes';  // ✅ Add this
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/api/message-templates', templateRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/leads', leadRoutes);
+app.use('/api/whatsapp', whatsappRoutes);  // ✅ Add this
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -46,7 +48,11 @@ app.get('/api/test', (req, res) => {
       'GET /api/messages/history',
       'GET /api/leads/:id',
       'PUT /api/leads/:id',
-      'DELETE /api/leads/:id'
+      'DELETE /api/leads/:id',
+      'GET /api/leads/:id/messages',
+      'GET /api/whatsapp/status',      // ✅ Add this
+      'POST /api/whatsapp/send-test',   // ✅ Add this
+      'GET /api/whatsapp/test-config'   // ✅ Add this
     ]
   });
 });
