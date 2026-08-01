@@ -3,8 +3,14 @@ import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import templateRoutes from './routes/template.routes';
-import messageRoutes from './routes/message.routes';
+import messageRoutes from './routes/messages.routes';
 import leadRoutes from './routes/lead.routes';
+import whatsappRoutes from './routes/whatsapp.routes';  // ✅ Add this
+import followupRoutes from './routes/followup.routes';
+import abTestRoutes from './routes/abtest.routes';
+import analyticsRoutes from './routes/analytics.routes';
+
+
 
 dotenv.config();
 
@@ -20,6 +26,10 @@ app.use(express.json());
 app.use('/api/message-templates', templateRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/leads', leadRoutes);
+app.use('/api/whatsapp', whatsappRoutes);  // ✅ Add this
+app.use('/api/followups', followupRoutes);
+app.use('/api/ab-tests', abTestRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -46,7 +56,16 @@ app.get('/api/test', (req, res) => {
       'GET /api/messages/history',
       'GET /api/leads/:id',
       'PUT /api/leads/:id',
-      'DELETE /api/leads/:id'
+      'DELETE /api/leads/:id',
+      'GET /api/leads/:id/messages',
+      'GET /api/whatsapp/status',
+      'POST /api/whatsapp/send-test',
+      'GET /api/whatsapp/test-config',
+      'POST /api/followups/schedule',
+      'GET /api/followups/pending',
+      'GET /api/followups/lead/:leadId',
+      'PUT /api/followups/:id',
+      'DELETE /api/followups/:id'
     ]
   });
 });

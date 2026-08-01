@@ -1,4 +1,4 @@
-// This is your Prisma schema file
+  // This is your Prisma schema file
 generator client {
   provider = "prisma-client-js"
 }
@@ -17,11 +17,14 @@ model Lead {
   company     String?
   status      String   @default("new")
   source      String?
-  notes       String?  // Removed @db.Text for SQLite compatibility
+  notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
+  // Relations
   messages    MessageHistory[]
+  followUps   FollowUp[]        // ✅ Added reverse relation
+  abResults   ABTestResult[]    // ✅ Added reverse relation
   
   @@map("leads")
 }
@@ -31,13 +34,17 @@ model MessageTemplate {
   name        String
   type        String   @default("custom")
   subject     String
-  content     String   // Removed @db.Text for SQLite compatibility
-  variables   String   // Changed from String[] to String for SQLite
+  content     String
+  variables   String   // Stored as JSON string
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
+  // Relations
   messages    MessageHistory[]
+  followUps   FollowUp[]        // ✅ Added reverse relation
+  testA       ABTest[]          @relation("templateA")
+  testB       ABTest[]          @relation("templateB")
   
   @@map("message_templates")
 }
@@ -47,18 +54,79 @@ model MessageHistory {
   leadId      String
   templateId  String?
   subject     String
-  content     String   // Removed @db.Text for SQLite compatibility
+  content     String
   channel     String
   status      String
   sentAt      DateTime @default(now())
   deliveredAt DateTime?
   readAt      DateTime?
-  metadata    String?  // Changed from Json to String for SQLite
+  metadata    String?
   
+  // Relations
   lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   template    MessageTemplate? @relation(fields: [templateId], references: [id])
   
   @@index([leadId])
   @@index([sentAt])
   @@map("message_history")
+}
+
+model FollowUp {
+  id          String   @id @default(cuid())
+  leadId      String
+  templateId  String?
+  message     String
+  channel     String   // email, whatsapp, sms
+  status      String   // pending, sent, cancelled
+  scheduledAt DateTime
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  template    MessageTemplate? @relation(fields: [templateId], references: [id])
+  
+  @@index([leadId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("follow_ups")
+}
+
+model ABTest {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  templateIdA String
+  templateIdB String
+  channel     String
+  leadSegment String?  // all, new, qualified, etc.
+  status      String   // draft, active, completed
+  winnerId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  templateA   MessageTemplate @relation("templateA", fields: [templateIdA], references: [id])
+  templateB   MessageTemplate @relation("templateB", fields: [templateIdB], references: [id])
+  results     ABTestResult[]
+  
+  @@map("ab_tests")
+}
+
+model ABTestResult {
+  id          String   @id @default(cuid())
+  testId      String
+  leadId      String
+  templateId  String   // Which template was sent
+  opened      Boolean  @default(false)
+  clicked     Boolean  @default(false)
+  replied     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  test        ABTest   @relation(fields: [testId], references: [id])
+  lead        Lead     @relation(fields: [leadId], references: [id])
+  
+  @@map("ab_test_results")
 }
