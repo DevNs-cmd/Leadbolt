@@ -4,6 +4,37 @@ import { PrismaClient } from '@prisma/client';
 const router = Router();
 const prisma = new PrismaClient();
 
+// POST - Create lead
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { email, phone, firstName, lastName, company, status, source, notes } = req.body;
+
+    if (!email && !phone) {
+      return res.status(400).json({ 
+        error: 'Either email or phone number is required' 
+      });
+    }
+
+    const lead = await prisma.lead.create({
+      data: {
+        email: email || null,
+        phone: phone || null,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        company: company || null,
+        status: status || 'new',
+        source: source || null,
+        notes: notes || null,
+      }
+    });
+
+    res.status(201).json(lead);
+  } catch (error) {
+    console.error('Error creating lead:', error);
+    res.status(500).json({ error: 'Failed to create lead' });
+  }
+});
+
 // GET - Single lead
 router.get('/:id', async (req: Request, res: Response) => {
   try {

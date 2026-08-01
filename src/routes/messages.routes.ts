@@ -5,7 +5,6 @@ import {
   getWhatsAppConfig, 
   validatePhoneNumber, 
   formatPhoneNumber,
-  getPhoneNumberErrorMessage,
   getWhatsAppStatus
 } from '../lib/whatsapp-config';
 
@@ -17,13 +16,13 @@ router.post('/send', async (req: Request, res: Response) => {
   try {
     const { leadId, templateId, subject, content, channel, metadata } = req.body;
 
-    // Validate required fields
+    // ✅ FIX: Allow content OR templateId
     if (!leadId) {
       return res.status(400).json({ error: 'Lead ID is required' });
     }
 
-    if (!content) {
-      return res.status(400).json({ error: 'Message content is required' });
+    if (!content && !templateId) {
+      return res.status(400).json({ error: 'Either content or templateId is required' });
     }
 
     // Validate channel
@@ -41,7 +40,9 @@ router.post('/send', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Lead not found' });
     }
 
-    // WhatsApp validation
+    // ============================================
+    // WHATSAPP CHANNEL VALIDATION
+    // ============================================
     if (channel === 'whatsapp') {
       const config = getWhatsAppConfig();
       if (!config.isConfigured) {
@@ -67,8 +68,10 @@ router.post('/send', async (req: Request, res: Response) => {
       }
     }
 
-    // Template processing
-    let templateContent = content;
+    // ============================================
+    // TEMPLATE PROCESSING
+    // ============================================
+    let templateContent = content || '';
     let templateSubject = subject || 'No Subject';
 
     if (templateId) {
@@ -76,34 +79,47 @@ router.post('/send', async (req: Request, res: Response) => {
         where: { id: templateId }
       });
 
-      if (template) {
-        templateContent = template.content || content;
-        templateSubject = template.subject || subject || 'No Subject';
-
-        // Parse variables from JSON string
-        let parsedVariables: string[] = [];
-        try {
-          parsedVariables = JSON.parse(template.variables || '[]');
-        } catch {
-          parsedVariables = [];
-        }
-
-        // Replace variables
-        parsedVariables.forEach((varName: string) => {
-          const value = lead[varName as keyof typeof lead] || '';
-          templateContent = templateContent.replace(
-            new RegExp(`\\{${varName}\\}`, 'g'),
-            String(value)
-          );
-          templateSubject = templateSubject.replace(
-            new RegExp(`\\{${varName}\\}`, 'g'),
-            String(value)
-          );
-        });
+      if (!template) {
+        return res.status(404).json({ error: 'Template not found' });
       }
+
+      // Use template content if no content provided
+      if (!content) {
+        templateContent = template.content || '';
+      }
+      if (!subject) {
+        templateSubject = template.subject || 'No Subject';
+      }
+
+      // Parse and replace variables
+      let parsedVariables: string[] = [];
+      try {
+        parsedVariables = JSON.parse(template.variables || '[]');
+      } catch {
+        parsedVariables = [];
+      }
+
+      parsedVariables.forEach((varName: string) => {
+        const value = lead[varName as keyof typeof lead] || '';
+        templateContent = templateContent.replace(
+          new RegExp(`\\{${varName}\\}`, 'g'),
+          String(value)
+        );
+        templateSubject = templateSubject.replace(
+          new RegExp(`\\{${varName}\\}`, 'g'),
+          String(value)
+        );
+      });
     }
 
-    // Create message history
+    // ✅ FIX: Check if we have content after template processing
+    if (!templateContent) {
+      return res.status(400).json({ error: 'Message content is required. Template may be empty.' });
+    }
+
+    // ============================================
+    // CREATE MESSAGE HISTORY
+    // ============================================
     const messageHistory = await prisma.messageHistory.create({
       data: {
         leadId,
@@ -117,7 +133,9 @@ router.post('/send', async (req: Request, res: Response) => {
       }
     });
 
-    // Send WhatsApp
+    // ============================================
+    // SEND VIA WHATSAPP
+    // ============================================
     if (channel === 'whatsapp') {
       try {
         const formattedPhone = formatPhoneNumber(lead.phone!);
@@ -160,7 +178,9 @@ router.post('/send', async (req: Request, res: Response) => {
       }
     }
 
-    // Send Email
+    // ============================================
+    // SEND VIA EMAIL
+    // ============================================
     if (channel === 'email') {
       console.log(`📧 Email sent to ${lead.email}:`, {
         subject: templateSubject,
@@ -190,7 +210,9 @@ router.post('/send', async (req: Request, res: Response) => {
       });
     }
 
-    // Send SMS
+    // ============================================
+    // SEND VIA SMS
+    // ============================================
     if (channel === 'sms') {
       console.log(`📱 SMS sent to ${lead.phone}:`, {
         content: templateContent
