@@ -51,3 +51,25 @@ class LeadQualifyResponse(BaseModel):
     lead: LeadResponse
     qualification_result: str
     ai_response: str
+
+
+class HealthResponse(BaseModel):
+    status: str = "healthy"
+    version: str = "1.0.0"
+    environment: str = "development"
+
+
+class BulkImportResponse(BaseModel):
+    created_count: int
+    skipped_count: int
+    leads: list[LeadResponse]
+
+
+class LeadStatsResponse(BaseModel):
+    total: int
+    new_count: int
+    contacted_count: int
+    qualified_count: int
+    unqualified_count: int
+
+    model_config = ConfigDict(from_attributes=True)

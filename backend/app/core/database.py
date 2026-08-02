@@ -22,3 +22,9 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def init_db():
+    # Import all models to ensure they are registered on Base.metadata
+    from app.models.lead import Lead  # noqa: F401
+    Base.metadata.create_all(bind=engine)

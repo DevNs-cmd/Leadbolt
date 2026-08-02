@@ -1,6 +1,6 @@
 import os
 from typing import Optional
-from app.models.lead import Lead
+from app.models.lead import Lead, LeadStatus
 from app.core.config import settings
 
 

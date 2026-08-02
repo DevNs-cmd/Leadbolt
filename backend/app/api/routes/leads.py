@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
@@ -13,6 +13,8 @@ from app.schemas.lead import (
     LeadListResponse,
     LeadQualifyRequest,
     LeadQualifyResponse,
+    BulkImportResponse,
+    LeadStatsResponse,
 )
 from app.services.llm import qualify_lead_with_llm
 
@@ -35,6 +37,32 @@ def create_lead(lead_data: LeadCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(lead)
     return lead
+
+
+@router.post("/bulk", response_model=BulkImportResponse, status_code=status.HTTP_201_CREATED)
+def bulk_create_leads(leads_data: list[LeadCreate], db: Session = Depends(get_db)):
+    """Bulk create leads from CSV or list, skipping duplicate emails."""
+    created_leads = []
+    skipped_count = 0
+    for lead_item in leads_data:
+        existing = db.query(Lead).filter(Lead.email == lead_item.email).first()
+        if existing:
+            skipped_count += 1
+            continue
+        lead = Lead(**lead_item.model_dump())
+        db.add(lead)
+        created_leads.append(lead)
+    
+    if created_leads:
+        db.commit()
+        for lead in created_leads:
+            db.refresh(lead)
+            
+    return BulkImportResponse(
+        created_count=len(created_leads),
+        skipped_count=skipped_count,
+        leads=created_leads,
+    )
 
 
 @router.get("/", response_model=LeadListResponse)
@@ -93,6 +121,58 @@ def list_leads(
     )
 
 
+# ── Stats endpoint MUST come before /{lead_id} so FastAPI doesn't
+# try to cast the string "stats" as an integer lead_id (would give 422).
+@router.get("/stats", response_model=LeadStatsResponse)
+def get_lead_stats(db: Session = Depends(get_db)):
+    """
+    Get lead statistics grouped by status.
+    Returns counts for each lead status: New, Contacted, Qualified, Unqualified.
+    """
+    total = db.query(Lead).count()
+    new_count = db.query(Lead).filter(Lead.status == LeadStatus.NEW).count()
+    contacted_count = db.query(Lead).filter(Lead.status == LeadStatus.CONTACTED).count()
+    qualified_count = db.query(Lead).filter(Lead.status == LeadStatus.QUALIFIED).count()
+    unqualified_count = db.query(Lead).filter(Lead.status == LeadStatus.UNQUALIFIED).count()
+
+    return LeadStatsResponse(
+        total=total,
+        new_count=new_count,
+        contacted_count=contacted_count,
+        qualified_count=qualified_count,
+        unqualified_count=unqualified_count,
+    )
+
+
+# ── /qualify POST also comes before /{lead_id} routes for the same reason.
+@router.post("/qualify", response_model=LeadQualifyResponse)
+async def qualify_lead(request: LeadQualifyRequest, db: Session = Depends(get_db)):
+    """Qualify a lead using AI (Groq/OpenAI)."""
+    lead = db.query(Lead).filter(Lead.email == request.email).first()
+    if not lead:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lead not found",
+        )
+
+    qualification_result = await qualify_lead_with_llm(lead, request.message)
+
+    if "qualified" in qualification_result.lower():
+        lead.status = LeadStatus.QUALIFIED
+    elif "contacted" in qualification_result.lower():
+        lead.status = LeadStatus.CONTACTED
+
+    db.commit()
+    db.refresh(lead)
+
+    return LeadQualifyResponse(
+        lead=lead,
+        qualification_result=qualification_result,
+        ai_response=qualification_result,
+    )
+
+
+# ── Parameterized routes come LAST.
 @router.get("/{lead_id}", response_model=LeadResponse)
 def get_lead(lead_id: int, db: Session = Depends(get_db)):
     """Get a single lead by ID."""
@@ -144,30 +224,3 @@ def delete_lead(lead_id: int, db: Session = Depends(get_db)):
 
     db.delete(lead)
     db.commit()
-
-
-@router.post("/qualify", response_model=LeadQualifyResponse)
-async def qualify_lead(request: LeadQualifyRequest, db: Session = Depends(get_db)):
-    """Qualify a lead using AI (Groq/OpenAI)."""
-    lead = db.query(Lead).filter(Lead.email == request.email).first()
-    if not lead:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Lead not found",
-        )
-
-    qualification_result = await qualify_lead_with_llm(lead, request.message)
-
-    if "qualified" in qualification_result.lower():
-        lead.status = LeadStatus.QUALIFIED
-    elif "contacted" in qualification_result.lower():
-        lead.status = LeadStatus.CONTACTED
-
-    db.commit()
-    db.refresh(lead)
-
-    return LeadQualifyResponse(
-        lead=lead,
-        qualification_result=qualification_result,
-        ai_response=qualification_result,
-    )
