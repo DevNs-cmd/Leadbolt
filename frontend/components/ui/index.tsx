@@ -198,3 +198,53 @@ export const Card: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className
     {children}
   </div>
 );
+
+// Textarea Component
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  error?: string;
+}
+
+export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
+  ({ className = '', error, ...props }, ref) => {
+    return (
+      <div className="w-full">
+        <textarea
+          ref={ref}
+          className={`w-full px-3 py-2 border rounded-lg text-sm text-gray-900 placeholder-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors resize-y ${
+            error ? 'border-red-500' : 'border-gray-300'
+          } ${className}`}
+          {...props}
+        />
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      </div>
+    );
+  }
+);
+Textarea.displayName = 'Textarea';
+
+// Switch Component
+export interface SwitchProps {
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  disabled?: boolean;
+  className?: string;
+}
+
+export const Switch: React.FC<SwitchProps> = ({ checked = false, onCheckedChange, disabled = false, className = '' }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    disabled={disabled}
+    onClick={() => onCheckedChange?.(!checked)}
+    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
+      checked ? 'bg-purple-600' : 'bg-gray-200'
+    } ${className}`}
+  >
+    <span
+      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+        checked ? 'translate-x-5' : 'translate-x-0.5'
+      }`}
+    />
+  </button>
+);
