@@ -118,6 +118,35 @@ export default function LeadsPage() {
     }
   }, [successMsg]);
 
+  // Phone number handlers
+  const handlePhoneChange = (value: string | undefined) => {
+    let nextCountry = formData.countryCode;
+    if (value) {
+      try {
+        const parsed = parsePhoneNumber(value);
+        if (parsed?.country) nextCountry = parsed.country as CountryCode;
+      } catch {
+        // Keep the current country if the partial value can't be parsed yet.
+      }
+    }
+    setFormData((prev) => ({ ...prev, phone: value || '', countryCode: nextCountry }));
+    if (phoneError) setPhoneError(null);
+  };
+
+  const handleCountryChange = (country?: CountryCode) => {
+    // The phone input library migrates the existing digits to the newly selected
+    // country's calling code and emits the updated value through `onChange`,
+    // so only the selected country needs to be tracked here.
+    setFormData((prev) => ({ ...prev, countryCode: country || 'IN' }));
+  };
+
+  const handlePhoneBlur = () => {
+    setPhoneTouched(true);
+    if (formData.phone && !isValidPhoneNumber(formData.phone, formData.countryCode)) {
+      setPhoneError('Please enter a valid phone number for the selected country.');
+    }
+  };
+
   // Form Submission
   const handleAddSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -592,21 +621,15 @@ export default function LeadsPage() {
               <Label>Phone Number</Label>
               <div className="relative">
                 <Phone
+                  international
                   country={formData.countryCode}
                   defaultCountry="IN"
                   value={formData.phone}
-                  onChange={(value) => {
-                    setFormData({ ...formData, phone: value || '' });
-                    // Clear error when user starts typing a new value
-                    if (phoneError) setPhoneError(null);
-                  }}
-                  onCountryChange={(country) => setFormData({ ...formData, countryCode: country || 'IN' })}
-                  onBlur={() => {
-                    setPhoneTouched(true);
-                    if (formData.phone && !isValidPhoneNumber(formData.phone, formData.countryCode)) {
-                      setPhoneError('Please enter a valid phone number for the selected country.');
-                    }
-                  }}
+                  smartCaret
+                  focusInputOnCountrySelection
+                  onChange={handlePhoneChange}
+                  onCountryChange={handleCountryChange}
+                  onBlur={handlePhoneBlur}
                   style={{
                     backgroundColor: 'white',
                     border: `1px solid ${phoneTouched && formData.phone && !isValidPhoneNumber(formData.phone, formData.countryCode) ? '#ef4444' : '#d1d5db'}`,
