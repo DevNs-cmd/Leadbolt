@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { Button, Card, Switch } from '@/components/ui';
 import { Plus } from 'lucide-react';
+import { axiosInstance } from '@/lib/axios';
 
 export function AutomationRules() {
-  const [rules, setRules] = useState([]);
+  const [rules, setRules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,8 +15,8 @@ export function AutomationRules() {
 
   const fetchRules = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/outreach/automation');
-      const data = await response.json();
+      const response = await axiosInstance.get('/api/v1/outreach/automation');
+      const data = response.data;
       setRules(data);
       setLoading(false);
     } catch (error) {

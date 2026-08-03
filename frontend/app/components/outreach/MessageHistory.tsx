@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
+import { Card } from '@/components/ui';
 import { Mail, MessageSquare } from 'lucide-react';
+import { axiosInstance } from '@/lib/axios';
 
 export function MessageHistory() {
   const [messages, setMessages] = useState([]);
@@ -14,8 +15,8 @@ export function MessageHistory() {
 
   const fetchMessages = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/outreach/history');
-      const data = await response.json();
+      const response = await axiosInstance.get('/api/v1/outreach/history');
+      const data = response.data;
       setMessages(data);
       setLoading(false);
     } catch (error) {

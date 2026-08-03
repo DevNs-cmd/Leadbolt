@@ -1,10 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
+import { Button, Card, Textarea } from '@/components/ui';
 import { Mail, MessageSquare } from 'lucide-react';
+import { axiosInstance } from '@/lib/axios';
 
 const TEMPLATES = {
   welcome: {
@@ -35,6 +34,7 @@ Your Sales Team`
     id: 'whatsapp_welcome',
     name: '💬 WhatsApp Welcome',
     type: 'whatsapp',
+    subject: '',
     body: `Hi {{name}}! 👋
 
 Welcome to LeadBolt!`
@@ -53,7 +53,7 @@ export function MessageTemplates() {
 
   const handleSend = async (channel: 'email' | 'whatsapp') => {
     const payload = {
-      templateId: selectedTemplate,
+      template_id: selectedTemplate,
       to: 'lead@example.com',
       subject: subject,
       message: getPreview(),
@@ -61,15 +61,9 @@ export function MessageTemplates() {
     };
 
     try {
-      const response = await fetch('http://localhost:8000/api/outreach/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      
-      const data = await response.json();
+      const response = await axiosInstance.post('/api/v1/outreach/send', payload);
       alert(`✅ Message sent via ${channel}!`);
-      console.log('Response:', data);
+      console.log('Response:', response.data);
     } catch (error) {
       alert('❌ Failed to send message. Check backend.');
       console.error('Error:', error);

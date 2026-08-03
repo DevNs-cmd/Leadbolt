@@ -1,5 +1,54 @@
-node_modules
-# Keep environment variables out of version control
+# =========================
+# Environment
+# =========================
 .env
+.env.*
 
-/generated/prisma
+# Keep the example file
+!.env.example
+
+# =========================
+# Python
+# =========================
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# Node / Next.js
+# =========================
+node_modules/
+.next/
+*.tsbuildinfo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/settings.json
+# =========================
+# AI coding assistant tooling
+# =========================
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
+
+# =========================
+# Prisma / Express leftovers
+# =========================
+prisma/dev.db
+prisma.config.ts.backup

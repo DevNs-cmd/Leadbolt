@@ -1,6 +1,12 @@
 import os
+import sys
 from datetime import datetime
 from typing import Dict, Any
+
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+except (AttributeError, ValueError):
+    pass
 
 # In-memory message store
 message_history = []
