@@ -39,3 +39,16 @@ Thumbs.db
 
 # VS Code
 .vscode/settings.json
+# =========================
+# AI coding assistant tooling
+# =========================
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
+
+# =========================
+# Prisma / Express leftovers
+# =========================
+prisma/dev.db
+prisma.config.ts.backup
